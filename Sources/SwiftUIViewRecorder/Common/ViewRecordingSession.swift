@@ -76,7 +76,7 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     public func stopRecording() -> Void {
         guard isRecording else { return }
         
-        print("Stop recording")
+        print("[Video Renderer]: stop recording")
         isRecording = false
         generateAsset()
     }
@@ -96,7 +96,7 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     }
  
     private func recordView() -> Void {
-        print("Start recording \(description)")
+        print("[Video Renderer]: start recording \(description)")
 
         let uiView = view.placeUIView()
         
@@ -122,7 +122,7 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
         assetGenerationCancellable?.cancel()
         
         let frameImages = frames.map { $0.render() }
-        print("Rendered \(frameImages.count) frames")
+        print("[Video Renderer]: rendered \(frameImages.count) frames")
 
         assetGenerationCancellable = framesRenderer(frameImages)
             .mapError { error in ViewRecordingError.renderingError(reason: error.localizedDescription) }
