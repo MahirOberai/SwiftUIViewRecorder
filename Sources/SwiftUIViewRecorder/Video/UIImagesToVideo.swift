@@ -112,8 +112,6 @@ extension Array where Element == UIImage {
                 }
             }
         }
-        .subscribe(on: DispatchQueue.global(qos: .userInitiated))
-        .receive(on: DispatchQueue.main)
     }
     
 }
