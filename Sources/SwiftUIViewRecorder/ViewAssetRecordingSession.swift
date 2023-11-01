@@ -3,10 +3,10 @@ import Combine
 
 /// Abstract recording session handler
 public protocol ViewAssetRecordingSession {
-    associatedtype Asset
+    associatedtype URL
     
     /// Subscribe to receive `Asset` or `ViewRecordingError` once recording is finished
-    var resultPublisher: AnyPublisher<Asset?, ViewRecordingError> { get }
+    var resultPublisher: AnyPublisher<URL?, ViewRecordingError> { get }
     
     /// Stop current recording session and start `Asset` generation
     func stopRecording() -> Void

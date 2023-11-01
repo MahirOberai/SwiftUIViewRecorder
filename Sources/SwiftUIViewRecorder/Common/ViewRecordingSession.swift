@@ -9,7 +9,7 @@ import Combine
 public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     
     private let view: AnyView
-    private let framesRenderer: ([UIImage]) -> Future<Asset?, Error>
+    private let framesRenderer: ([URL]) -> Future<Asset?, Error>
     
     private let useSnapshots: Bool
     private let duration: Double?
@@ -17,6 +17,7 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     
     private var isRecording: Bool = true
     private var frames: [ViewFrame] = []
+    private var frameURLs: [URL] = []
     
     private let resultSubject: PassthroughSubject<Asset?, ViewRecordingError> = PassthroughSubject()
     private var assetGenerationCancellable: AnyCancellable? = nil
@@ -58,8 +59,8 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
         self.framesPerSecond = framesPerSecond
         self.useSnapshots = useSnapshots
         
-        self.framesRenderer = { images in
-            framesRenderer.render(frames: images, framesPerSecond: framesPerSecond)
+        self.framesRenderer = { urls in
+            framesRenderer.render(frameURLs: urls, framesPerSecond: framesPerSecond)
         }
         
         recordView()
@@ -76,7 +77,7 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     public func stopRecording() -> Void {
         guard isRecording else { return }
         
-        print("[Video Renderer]: stop recording")
+        print("[Media Renderer]: stop recording frames")
         isRecording = false
         generateAsset()
     }
@@ -86,7 +87,7 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     }
     
     private var allFramesCaptured: Bool {
-        fixedFramesCount != nil && frames.count >= fixedFramesCount!
+        fixedFramesCount != nil && frameURLs.count >= fixedFramesCount!
     }
     
     private var description: String {
@@ -96,37 +97,68 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     }
  
     private func recordView() -> Void {
-        print("[Video Renderer]: start recording \(description)")
+        print("[Media Renderer]: start recording \(description)")
 
         let uiView = view.placeUIView()
+        var currentFrameIndex = 0
+        var removedFrames = 0
         
         Timer.scheduledTimer(withTimeInterval: 1 / framesPerSecond, repeats: true) { timer in
             if (!self.isRecording) {
                 timer.invalidate()
                 uiView.removeFromSuperview()
             } else {
+                let currentImage: UIImage
                 if self.useSnapshots, let snapshotView = uiView.snapshotView(afterScreenUpdates: false) {
-                    self.frames.append(ViewFrame(snapshot: snapshotView))
+                    currentImage = snapshotView.asImage()
                 } else {
-                    self.frames.append(ViewFrame(image: uiView.asImage(afterScreenUpdates: false)))
+                    currentImage = uiView.asImage(afterScreenUpdates: false)
                 }
-                
+
+                if currentFrameIndex < 5 {
+                    removedFrames += 1
+                } else {
+                    if let prevImageURL = self.frameURLs.last, let prevImage = UIImage.loadImageFromDisk(at: prevImageURL), prevImage.isEqualTo(currentImage) {
+                        removedFrames += 1
+                    } else if let savedURL = currentImage.saveToDisk(fileName: "frame_\(currentFrameIndex).jpg") {
+                            self.frameURLs.append(savedURL)
+                        print("[Media Renderer]: appending frame \(self.frameURLs.count)")
+
+                        
+                        
+//                        self.frames.append(ViewFrame(image: currentImage))
+                    }
+                }
+
                 if (self.allFramesCaptured) {
                     self.stopRecording()
+                    print("[Media Renderer]: removed \(removedFrames) frames, \(self.frameURLs.count) frames to be rendered")
                 }
+
+                currentFrameIndex += 1
             }
         }
     }
     
     private func generateAsset() -> Void {
         assetGenerationCancellable?.cancel()
-        
-        let frameImages = frames.map { $0.render() }
-        print("[Video Renderer]: rendered \(frameImages.count) frames")
+//        let frameImages = frames.map { $0.render() }
+        print("[Video Renderer]: rendered \(frameURLs.count) frames to urls")
 
-        assetGenerationCancellable = framesRenderer(frameImages)
+        assetGenerationCancellable = framesRenderer(frameURLs)
             .mapError { error in ViewRecordingError.renderingError(reason: error.localizedDescription) }
             .subscribe(on: DispatchQueue.global(qos: .userInitiated))
             .subscribe(resultSubject)
+    }
+}
+
+
+extension UIImage {
+    func isEqualTo(_ otherImage: UIImage) -> Bool {
+        guard let data1 = self.pngData(), let data2 = otherImage.pngData() else {
+            return false
+        }
+        
+        return data1 == data2
     }
 }

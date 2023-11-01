@@ -3,7 +3,16 @@ import UIImageExtensions
 import Combine
 
 class VideoRenderer: FramesRenderer {
-    func render(frames: [UIImage], framesPerSecond: Double) -> Future<URL?, Error> {
-        frames.toVideo(framesPerSecond: framesPerSecond)
+    typealias Asset = URL
+    
+//    func render(frames: [UIImage], framesPerSecond: Double) -> Future<URL?, Error> {
+//        frames.toVideo(framesPerSecond: framesPerSecond)
+//    }
+    
+    func render(frameURLs: [URL], framesPerSecond: Double) -> Future<URL?, Error> {
+        frameURLs.toVideo(framesPerSecond: framesPerSecond)
     }
+    
+    
+
 }
