@@ -17,6 +17,8 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     
     private var isRecording: Bool = true
     private var frames: [ViewFrame] = []
+    var backgroundImage: UIImage?
+
     
     private let resultSubject: PassthroughSubject<Asset?, ViewRecordingError> = PassthroughSubject()
     private var assetGenerationCancellable: AnyCancellable? = nil
@@ -98,16 +100,19 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
         print("[DZ Media Renderer]: start recording \(description)")
         
         let uiView = view.placeUIView()
+        var removedFrames = 0
         
         Timer.scheduledTimer(withTimeInterval: 1 / framesPerSecond, repeats: true) { timer in
             if (!self.isRecording) {
                 timer.invalidate()
                 uiView.removeFromSuperview()
             } else {
-                if self.useSnapshots, let snapshotView = uiView.snapshotView(afterScreenUpdates: false) {
+                if removedFrames < 5 {
+                    removedFrames += 1
+                } else if self.useSnapshots, let snapshotView = uiView.snapshotView(afterScreenUpdates: false) {
                     self.frames.append(ViewFrame(snapshot: snapshotView))
                 } else {
-                    self.frames.append(ViewFrame(image: uiView.asImage(afterScreenUpdates: false)))
+                    self.frames.append(ViewFrame(image: uiView.asImage(afterScreenUpdates: true)))
                 }
                 
                 if (self.allFramesCaptured) {
