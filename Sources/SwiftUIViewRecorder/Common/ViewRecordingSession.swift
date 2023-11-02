@@ -61,7 +61,7 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
         self.useSnapshots = useSnapshots
         
         self.framesRenderer = { images in
-            framesRenderer.render(frames: images, framesPerSecond: framesPerSecond)
+            framesRenderer.render(frames: images, framesPerSecond: 30)
         }
         
         recordView()
@@ -107,7 +107,7 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
                 timer.invalidate()
                 uiView.removeFromSuperview()
             } else {
-                if removedFrames < 5 {
+                if removedFrames < 8 {
                     removedFrames += 1
                 } else if self.useSnapshots, let snapshotView = uiView.snapshotView(afterScreenUpdates: false) {
                     self.frames.append(ViewFrame(snapshot: snapshotView))
