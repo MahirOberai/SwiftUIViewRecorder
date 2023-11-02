@@ -68,7 +68,6 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     /// Subscribe to receive generated `Asset` or generation `ViewRecordingError`
     public var resultPublisher: AnyPublisher<Asset?, ViewRecordingError> {
         resultSubject
-            .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
     }
     
@@ -76,7 +75,7 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     public func stopRecording() -> Void {
         guard isRecording else { return }
         
-        print("[Video Renderer]: stop recording")
+        print("[DZ Media Renderer]: stop recording")
         isRecording = false
         generateAsset()
     }
@@ -92,12 +91,12 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     private var description: String {
         (duration != nil ? "\(duration!) seconds," : "")
             + (fixedFramesCount != nil ? " \(fixedFramesCount!) frames," : "")
-            + " \(framesPerSecond) fps"
+        + " \(framesPerSecond) fps"
     }
- 
+    
     private func recordView() -> Void {
-        print("[Video Renderer]: start recording \(description)")
-
+        print("[DZ Media Renderer]: start recording \(description)")
+        
         let uiView = view.placeUIView()
         
         Timer.scheduledTimer(withTimeInterval: 1 / framesPerSecond, repeats: true) { timer in
@@ -121,12 +120,16 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     private func generateAsset() -> Void {
         assetGenerationCancellable?.cancel()
         
-        let frameImages = frames.map { $0.render() }
-        print("[Video Renderer]: rendered \(frameImages.count) frames")
+      
+        // Dispatch the frame rendering and subsequent operations to a .userInitiated queue
+        DispatchQueue.global(qos: .userInitiated).async {
+            let frameImages = self.frames.map { $0.render() }
+            print("[DZ Media Renderer]: rendered \(frameImages.count) frames")
 
-        assetGenerationCancellable = framesRenderer(frameImages)
-            .mapError { error in ViewRecordingError.renderingError(reason: error.localizedDescription) }
-            .subscribe(on: DispatchQueue.global(qos: .userInitiated))
-            .subscribe(resultSubject)
+            // We're already on the .userInitiated queue, so we don't need the .subscribe(on:) anymore
+            self.assetGenerationCancellable = self.framesRenderer(frameImages)
+                .mapError { error in ViewRecordingError.renderingError(reason: error.localizedDescription) }
+                .subscribe(self.resultSubject)
+        }
     }
 }
