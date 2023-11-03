@@ -100,7 +100,7 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
         print("[DZ Media Renderer]: start recording \(description)")
         
         let uiView = view.placeUIView()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             Timer.scheduledTimer(withTimeInterval: 1 / self.framesPerSecond, repeats: true) { timer in
                 if (!self.isRecording) {
                     timer.invalidate()
