@@ -37,7 +37,7 @@ public class ViewRecordingSessionViewModel<Asset>: ObservableObject {
                     break
                 }
             }, receiveValue: { [weak self] value in
-                self?.asset = value
+                self?.asset = value.0
             })
     }
     

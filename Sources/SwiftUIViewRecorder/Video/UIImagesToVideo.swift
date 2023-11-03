@@ -46,10 +46,10 @@ extension Array where Element == UIImage {
      - Returns: Future URL of a generated video file or Error
      */
     func toVideo(framesPerSecond: Double,
-                 codecType: AVVideoCodecType = .h264) -> Future<URL?, Error> {
+                 codecType: AVVideoCodecType = .h264) -> Future<(URL?, UIImage), Error> {
         print("[DZ Media Renderer]: generating video framesPerSecond=\(framesPerSecond), codecType=\(codecType.rawValue)")
         
-        return Future<URL?, Error> { promise in
+        return Future<(URL?, UIImage), Error> { promise in
             guard self.count > 0 else {
                 promise(.failure(UIImagesToVideoError.noFrames))
                 return
@@ -102,8 +102,9 @@ extension Array where Element == UIImage {
             writer.finishWriting {
                 switch writer.status {
                 case .completed:
+                    guard let lastImage = self.last else { return }
                     print("[DZ Media Renderer]: successfully finished writing video \(url)")
-                    promise(.success(url))
+                    promise(.success((url, lastImage)))
                     break
                 default:
                     let error = writer.error ?? UIImagesToVideoError.internalError

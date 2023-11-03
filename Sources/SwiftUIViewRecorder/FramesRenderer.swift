@@ -13,5 +13,5 @@ public protocol FramesRenderer {
      - Parameter framesPerSecond: number of `UIImage` to be rendered per second
      - Returns: eventually returns generated `Asset` or `Error`
      */
-    func render(frames: [UIImage], framesPerSecond: Double) -> Future<Asset?, Error>
+    func render(frames: [UIImage], framesPerSecond: Double) -> Future<(Asset?, UIImage), Error>
 }

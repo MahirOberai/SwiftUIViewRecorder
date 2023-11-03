@@ -9,7 +9,7 @@ import Combine
 public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     
     private let view: AnyView
-    private let framesRenderer: ([UIImage]) -> Future<Asset?, Error>
+    private let framesRenderer: ([UIKit.UIImage]) -> Future<(Asset?, UIImage), Error>
     
     private let useSnapshots: Bool
     private let duration: Double?
@@ -20,7 +20,7 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     var backgroundImage: UIImage?
 
     
-    private let resultSubject: PassthroughSubject<Asset?, ViewRecordingError> = PassthroughSubject()
+    private let resultSubject: PassthroughSubject<(Asset?, UIImage), ViewRecordingError> = PassthroughSubject()
     private var assetGenerationCancellable: AnyCancellable? = nil
     
     /**
@@ -68,7 +68,7 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     }
     
     /// Subscribe to receive generated `Asset` or generation `ViewRecordingError`
-    public var resultPublisher: AnyPublisher<Asset?, ViewRecordingError> {
+    public var resultPublisher: AnyPublisher<(Asset?, UIImage), ViewRecordingError> {
         resultSubject
             .eraseToAnyPublisher()
     }
@@ -93,7 +93,7 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     private var description: String {
         (duration != nil ? "\(duration!) seconds," : "")
             + (fixedFramesCount != nil ? " \(fixedFramesCount!) frames," : "")
-        + " \(framesPerSecond) fps"
+        + " \(framesPerSecond) fps image capture, video rendered at 30 fps"
     }
     
     private func recordView() -> Void {
@@ -122,14 +122,10 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     
     private func generateAsset() -> Void {
         assetGenerationCancellable?.cancel()
-        
-      
-        // Dispatch the frame rendering and subsequent operations to a .userInitiated queue
+              
         DispatchQueue.global(qos: .userInitiated).async {
             let frameImages = self.frames.map { $0.render() }
             print("[DZ Media Renderer]: rendered \(frameImages.count) frames")
-
-            // We're already on the .userInitiated queue, so we don't need the .subscribe(on:) anymore
             self.assetGenerationCancellable = self.framesRenderer(frameImages)
                 .mapError { error in ViewRecordingError.renderingError(reason: error.localizedDescription) }
                 .subscribe(self.resultSubject)
