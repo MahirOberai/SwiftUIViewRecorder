@@ -100,23 +100,21 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
         print("[DZ Media Renderer]: start recording \(description)")
         
         let uiView = view.placeUIView()
-        var removedFrames = 0
-        
-        Timer.scheduledTimer(withTimeInterval: 1 / framesPerSecond, repeats: true) { timer in
-            if (!self.isRecording) {
-                timer.invalidate()
-                uiView.removeFromSuperview()
-            } else {
-                if removedFrames < 8 {
-                    removedFrames += 1
-                } else if self.useSnapshots, let snapshotView = uiView.snapshotView(afterScreenUpdates: false) {
-                    self.frames.append(ViewFrame(snapshot: snapshotView))
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            Timer.scheduledTimer(withTimeInterval: 1 / self.framesPerSecond, repeats: true) { timer in
+                if (!self.isRecording) {
+                    timer.invalidate()
+                    uiView.removeFromSuperview()
                 } else {
-                    self.frames.append(ViewFrame(image: uiView.asImage(afterScreenUpdates: true)))
-                }
-                
-                if (self.allFramesCaptured) {
-                    self.stopRecording()
+                    if self.useSnapshots, let snapshotView = uiView.snapshotView(afterScreenUpdates: false) {
+                        self.frames.append(ViewFrame(snapshot: snapshotView))
+                    } else {
+                        self.frames.append(ViewFrame(image: uiView.asImage(afterScreenUpdates: true)))
+                    }
+                    
+                    if (self.allFramesCaptured) {
+                        self.stopRecording()
+                    }
                 }
             }
         }
