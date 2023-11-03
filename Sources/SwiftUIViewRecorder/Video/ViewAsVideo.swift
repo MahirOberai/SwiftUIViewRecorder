@@ -12,12 +12,14 @@ extension SwiftUI.View {
      
      - Returns: `ViewRecordingSession` recording handler to control recording process.
      */
-    public func recordVideo(duration: Double? = nil,
+    public func recordVideo(delay: Double? = nil,
+                            duration: Double? = nil,
                             framesPerSecond: Double = 24,
                             useSnapshots: Bool = false) throws -> ViewRecordingSession<URL> {
         try ViewRecordingSession(view: self,
                                  framesRenderer: VideoRenderer(),
                                  useSnapshots: useSnapshots,
+                                 delay: delay,
                                  duration: duration,
                                  framesPerSecond: framesPerSecond)
     }

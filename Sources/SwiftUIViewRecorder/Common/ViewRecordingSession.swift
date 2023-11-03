@@ -12,6 +12,7 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     private let framesRenderer: ([UIKit.UIImage]) -> Future<(Asset?, UIImage), Error>
     
     private let useSnapshots: Bool
+    private let delay: Double?
     private let duration: Double?
     private let framesPerSecond: Double
     
@@ -48,6 +49,7 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     public init<V: SwiftUI.View, Renderer: FramesRenderer>(view: V,
                                                            framesRenderer: Renderer,
                                                            useSnapshots: Bool = false,
+                                                           delay: Double? = nil,
                                                            duration: Double? = nil,
                                                            framesPerSecond: Double) throws where Renderer.Asset == Asset {
         guard duration == nil || duration! > 0
@@ -56,6 +58,7 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
             else { throw ViewRecordingError.illegalFramesPerSecond }
         
         self.view = AnyView(view)
+        self.delay = delay
         self.duration = duration
         self.framesPerSecond = framesPerSecond
         self.useSnapshots = useSnapshots
@@ -97,23 +100,25 @@ public class ViewRecordingSession<Asset>: ViewAssetRecordingSession {
     }
     
     private func recordView() -> Void {
-        print("[DZ Media Renderer]: start recording \(description)")
-        
-        let uiView = view.placeUIView()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            Timer.scheduledTimer(withTimeInterval: 1 / self.framesPerSecond, repeats: true) { timer in
-                if (!self.isRecording) {
-                    timer.invalidate()
-                    uiView.removeFromSuperview()
-                } else {
-                    if self.useSnapshots, let snapshotView = uiView.snapshotView(afterScreenUpdates: false) {
-                        self.frames.append(ViewFrame(snapshot: snapshotView))
+        DispatchQueue.main.async {
+            print("[DZ Media Renderer]: placed uiView from swiftUI view waiting \(self.delay ?? 0.0) seconds delay")
+            let uiView = self.view.placeUIView()
+            DispatchQueue.main.asyncAfter(deadline: .now() + (self.delay ?? 0.0)) {
+                print("[DZ Media Renderer]: start recording \(self.description)")
+                Timer.scheduledTimer(withTimeInterval: 1 / self.framesPerSecond, repeats: true) { timer in
+                    if (!self.isRecording) {
+                        timer.invalidate()
+                        uiView.removeFromSuperview()
                     } else {
-                        self.frames.append(ViewFrame(image: uiView.asImage(afterScreenUpdates: true)))
-                    }
-                    
-                    if (self.allFramesCaptured) {
-                        self.stopRecording()
+                        if self.useSnapshots, let snapshotView = uiView.snapshotView(afterScreenUpdates: false) {
+                            self.frames.append(ViewFrame(snapshot: snapshotView))
+                        } else {
+                            self.frames.append(ViewFrame(image: uiView.asImage(afterScreenUpdates: true)))
+                        }
+                        
+                        if (self.allFramesCaptured) {
+                            self.stopRecording()
+                        }
                     }
                 }
             }
